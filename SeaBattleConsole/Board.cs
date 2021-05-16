@@ -9,7 +9,7 @@ namespace SeaBattleConsole
     internal class Board
     {
         private int playerHP, enemyHP, shipsPlaced;
-        private bool turn, planning, placement, waiting, host, connected, lobby, getHostIP;
+        private bool turn, planning, placement, afplaning, host, connected, lobby, getHostIP;
         private static TcpClient client;
         private Cell[,] playerField = new Cell[10, 10];
         private Cell[,] enemyField = new Cell[10, 10];
@@ -154,9 +154,15 @@ namespace SeaBattleConsole
         private void afterPlan()
         {
             Console.Write("All ships dispatched, waiting for enemy...");
-            while (true)
+            NetworkStream stream = client.GetStream();
+            Byte[] b = new Byte[10];
+            Byte[] bSend = System.Text.Encoding.Unicode.GetBytes("done");
+            int i;
+            while ((i = stream.Read(b, 0, b.Length)) != 0)
             {
-                // TODO get enemy field data
+                string messege = System.Text.Encoding.Unicode.GetString(b, 0, i);
+                Console.WriteLine(messege);
+                if (messege == "enemy done!") break;
             }
         }
 
@@ -240,7 +246,7 @@ namespace SeaBattleConsole
         {
             if (shipsPlaced >= 10)
             {
-                waiting = true;
+                afplaning = true;
                 return;
             }
 
@@ -361,13 +367,14 @@ namespace SeaBattleConsole
 
             Console.Write("\n");
 
-            if (planning && !waiting)
+            if (planning)
+            {
                 plan();
+                return;
+            }
 
-            /*
-            if (planning && waiting)
+            if (afplaning)
                 afterPlan();
-            */
 
             if (playerHP == 0)
             {
@@ -621,14 +628,14 @@ namespace SeaBattleConsole
                     enemyField[i, j] = new Cell(true);
                 }
             }
-
+            client = new TcpClient();
             shipsPlaced = 0;
 
             playerHP = 20;
             enemyHP = playerHP;
 
             placement = false;
-            waiting = false;
+            afplaning = false;
             connected = false;
             lobby = true;
             planning = true;
@@ -638,7 +645,7 @@ namespace SeaBattleConsole
 
         public void start()
         {
-            client = new TcpClient();
+            //client = new TcpClient();
             try
             {
                 client.Connect("93.191.58.52", 420);
