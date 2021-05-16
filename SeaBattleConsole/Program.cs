@@ -22,17 +22,16 @@ namespace SeaBattleConsole
                     case "0":
                         exit = true;
                         break;
-
                     case "1":
                         Console.Clear();
                         game.drawLogo();
                         game.start();
                         break;
-
                     default:
                         Console.Clear();
                         break;
                 }
+                
             }
             // game.start();
         }
