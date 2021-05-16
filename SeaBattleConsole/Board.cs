@@ -13,8 +13,6 @@ namespace SeaBattleConsole
         private static TcpClient client;
         private Cell[,] playerField = new Cell[10, 10];
         private Cell[,] enemyField = new Cell[10, 10];
-        private Cell[,] testPlayerField = new Cell[10, 10];
-        private Cell[,] testEnemyField = new Cell[10, 10];
 
         private void drawCell(Cell cell)
         {
@@ -221,7 +219,6 @@ namespace SeaBattleConsole
                                 if (ValidateIP)
                                 {
                                     Console.WriteLine("This is a valide ip address");
-                                    
                                 }
                                 else
                                     Console.WriteLine("This is not a valide ip address");
@@ -328,10 +325,7 @@ namespace SeaBattleConsole
         {
             Console.WriteLine("BOMBS!!! Brace!");
 
-            System.Threading.Thread.Sleep(2000);
-
-            if (!getBombed(DEBUG_randomCell()))
-                turn = true;
+            // write server logic
         }
 
         private void drawUI()
@@ -619,38 +613,16 @@ namespace SeaBattleConsole
 
         public Board()
         {
-            // TEST
-
-           
-
-            for (int i = 0; i < 10; i++)
-            {
-                for (int j = 0; j < 10; j++)
-                {
-                    testPlayerField[i, j] = new Cell(false);
-                    testEnemyField[i, j] = new Cell(true);
-                }
-            }
-
-           
-
             for (int i = 0; i < 10; i++)
             {
                 for (int j = 0; j < 10; j++)
                 {
                     playerField[i, j] = new Cell(false);
                     enemyField[i, j] = new Cell(true);
-
-                    // TEST
-
-                    playerField[i, j] = testPlayerField[i, j];
-                    enemyField[i, j] = testEnemyField[i, j];
                 }
             }
 
             shipsPlaced = 0;
-
-            shipsPlaced = 10; // TEST
 
             playerHP = 20;
             enemyHP = playerHP;
@@ -684,7 +656,7 @@ namespace SeaBattleConsole
                     }
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine(e.Message + "Server not active");
                 return;
@@ -718,5 +690,5 @@ namespace SeaBattleConsole
                 Byte[] data = System.Text.Encoding.Unicode.GetBytes(Console.ReadLine());
                 stream.Write(data);
             }
- * 
+ *
  */
