@@ -221,7 +221,6 @@ namespace SeaBattleConsole
                                 if (ValidateIP)
                                 {
                                     Console.WriteLine("This is a valide ip address");
-                                    
                                 }
                                 else
                                     Console.WriteLine("This is not a valide ip address");
@@ -328,10 +327,12 @@ namespace SeaBattleConsole
         {
             Console.WriteLine("BOMBS!!! Brace!");
 
-            System.Threading.Thread.Sleep(2000);
+            // write something for receiving signal for getBombed from enemy
 
-            if (!getBombed(DEBUG_randomCell()))
-                turn = true;
+            //System.Threading.Thread.Sleep(2000);
+
+            //if (!getBombed(DEBUG_randomCell()))
+            //    turn = true;
         }
 
         private void drawUI()
@@ -619,98 +620,16 @@ namespace SeaBattleConsole
 
         public Board()
         {
-            // TEST
-
-            // /*
-
-            for (int i = 0; i < 10; i++)
-            {
-                for (int j = 0; j < 10; j++)
-                {
-                    testPlayerField[i, j] = new Cell(false);
-                    testEnemyField[i, j] = new Cell(true);
-                }
-            }
-
-            testPlayerField[0, 0].PlaceShip();
-            testPlayerField[0, 1].PlaceShip();
-
-            testPlayerField[0, 3].PlaceShip();
-            testPlayerField[1, 3].PlaceShip();
-            testPlayerField[2, 3].PlaceShip();
-
-            testPlayerField[0, 6].PlaceShip();
-            testPlayerField[0, 7].PlaceShip();
-            testPlayerField[0, 8].PlaceShip();
-            testPlayerField[0, 9].PlaceShip();
-
-            testPlayerField[2, 9].PlaceShip();
-            testPlayerField[3, 9].PlaceShip();
-
-            testPlayerField[4, 1].PlaceShip();
-            testPlayerField[5, 1].PlaceShip();
-            testPlayerField[6, 1].PlaceShip();
-
-            testPlayerField[5, 6].PlaceShip();
-
-            testPlayerField[8, 3].PlaceShip();
-
-            testPlayerField[8, 5].PlaceShip();
-
-            testPlayerField[8, 8].PlaceShip();
-            testPlayerField[9, 8].PlaceShip();
-
-            testPlayerField[9, 0].PlaceShip();
-
-            testEnemyField[0, 0].PlaceShip();
-            testEnemyField[0, 1].PlaceShip();
-
-            testEnemyField[0, 3].PlaceShip();
-            testEnemyField[1, 3].PlaceShip();
-            testEnemyField[2, 3].PlaceShip();
-
-            testEnemyField[0, 6].PlaceShip();
-            testEnemyField[0, 7].PlaceShip();
-            testEnemyField[0, 8].PlaceShip();
-            testEnemyField[0, 9].PlaceShip();
-
-            testEnemyField[2, 9].PlaceShip();
-            testEnemyField[3, 9].PlaceShip();
-
-            testEnemyField[4, 1].PlaceShip();
-            testEnemyField[5, 1].PlaceShip();
-            testEnemyField[6, 1].PlaceShip();
-
-            testEnemyField[5, 6].PlaceShip();
-
-            testEnemyField[8, 3].PlaceShip();
-
-            testEnemyField[8, 5].PlaceShip();
-
-            testEnemyField[8, 8].PlaceShip();
-            testEnemyField[9, 8].PlaceShip();
-
-            testEnemyField[9, 0].PlaceShip();
-
-            // */
-
             for (int i = 0; i < 10; i++)
             {
                 for (int j = 0; j < 10; j++)
                 {
                     playerField[i, j] = new Cell(false);
                     enemyField[i, j] = new Cell(true);
-
-                    // TEST
-
-                    playerField[i, j] = testPlayerField[i, j];
-                    enemyField[i, j] = testEnemyField[i, j];
                 }
             }
 
             shipsPlaced = 0;
-
-            shipsPlaced = 10; // TEST
 
             playerHP = 20;
             enemyHP = playerHP;
@@ -744,7 +663,7 @@ namespace SeaBattleConsole
                     }
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine(e.Message + "Server not active");
                 return;
@@ -778,5 +697,5 @@ namespace SeaBattleConsole
                 Byte[] data = System.Text.Encoding.Unicode.GetBytes(Console.ReadLine());
                 stream.Write(data);
             }
- * 
+ *
  */
