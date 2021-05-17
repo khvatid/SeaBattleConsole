@@ -35,14 +35,14 @@ namespace SeaBattleConsole
             lobby = true;
             planning = true;
             getHostIP = true;
-            turn = true;
+            turn = false;
         }
         public void start()
         {
             //client = new TcpClient();
             try
             {
-                client.Connect("localhost", 420);//93.191.58.52
+                client.Connect("93.191.58.52", 420);//93.191.58.52
                 if (client.Connected)
                 {
                     NetworkStream serverCennel = client.GetStream();
@@ -70,7 +70,7 @@ namespace SeaBattleConsole
 
         private void plan()
         {
-            if (shipsPlaced >= 2)
+            if (shipsPlaced >= 10)
             {
                 afplaning = true;
                 planning = false;
@@ -323,12 +323,12 @@ namespace SeaBattleConsole
                 int column = getColumn(cache);
                 enemyField[row, column].Bomb();
                 NetworkStream stream = client.GetStream();
-                Byte[] b = new Byte[1] {(byte)cache};
+                Byte[] b = new Byte[5] {(byte)cache,0,0,0,0};
                 stream.Write(b);
                 int i = 0;
                 while ((i = stream.Read(b, 0, b.Length)) != 0)
                 {
-                    int result = BitConverter.ToInt32(b, 0);
+                    int result = BitConverter.ToInt32(b);
                     switch(result)
                     {
                         case 0:

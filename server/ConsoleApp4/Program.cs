@@ -122,19 +122,22 @@ namespace ServerForBattleShip
                 threads[i].Join();
             }
             SendToAllClients("enemy done");
-            SendToClient(clients[0],"1");
-            SendToClient(clients[1], "0");
+            SendToClient(clients[0],"first");
+            SendToClient(clients[1], "second");
             threads.Clear();
-            int gameTurn = 1;
+            bool firstPlayer = true;
             while (true)
             {
-               if(gameTurn >= 1)
+               if(firstPlayer == true)
                 {
-                    gameTurn = playStage(clients[0].GetStream(), clients[1].GetStream());
+                   int turn = playStage(clients[0].GetStream(), clients[1].GetStream());
+                    if (turn == 0) firstPlayer = false;
+
                 }
                else
                 {
-                    gameTurn = playStage(clients[1].GetStream(), clients[0].GetStream());
+                    int turn = playStage(clients[1].GetStream(), clients[0].GetStream());
+                    if (turn == 0) firstPlayer = true;
                 }
             }
             
