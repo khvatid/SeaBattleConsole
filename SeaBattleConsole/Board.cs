@@ -117,11 +117,19 @@ namespace SeaBattleConsole
             while ((i = stream.Read(b, 0, b.Length)) != 0)
             {
                 string messege = System.Text.Encoding.Unicode.GetString(b, 0,i);
-                
+                if(messege == "1")
+                {
+                    turn = true;
+                    return;
+                }
+                if(messege == "0")
+                {
+                    turn = false;
+                    return;
+                }
                 if (messege == "enemy done") {
                     Console.WriteLine(messege);
                     afplaning = false;    
-                    break;
                 }
             }
         }
@@ -306,22 +314,56 @@ namespace SeaBattleConsole
         {
             Console.WriteLine("Enter coordinates to bomb (if you damage enemy ship he skips the turn): ");
             string input = Console.ReadLine();
-
             int cache = validCheck(input);
             if (cache == -1)
                 return;
+            else
+            {
+                int row = getRow(cache);
+                int column = getColumn(cache);
+                enemyField[row, column].Bomb();
+                NetworkStream stream = client.GetStream();
+                Byte[] b = new Byte[1] {(byte)cache};
+                stream.Write(b);
+                int i = 0;
+                while ((i = stream.Read(b, 0, b.Length)) != 0)
+                {
+                    int result = BitConverter.ToInt32(b, 0);
+                    switch(result)
+                    {
+                        case 0:
+                            turn = false;
+                            return;
+                        case 1:
+                            enemyField[row, column].PlaceShip();
+                            enemyHP--;
+                            return;
+                        case 2:
+                            enemyField[row, column].PlaceShip();
+                            enemyHP--;
+                            destructionReveal(cache);
+                            return;
+                        default: break;
+                    }   
+                    
+                }
 
-            // send cache to enemy for his getBombed
+            }
 
-            // write something to change bool turn
-
-            // if received signal shipDestroyed, call destructionReveal(cache)
         }
         private void waitTurn()
         {
             Console.WriteLine("BOMBS!!! Brace!");
-
-            // write server logic
+            NetworkStream stream = client.GetStream();
+            Byte[] b = new Byte[5];
+            int i = 0;
+            while ((i = stream.Read(b, 0, b.Length)) != 0)
+            {
+                int rowColumn = BitConverter.ToInt32(b, 0);
+                Byte[] bSend = new Byte[1]{(byte)getBombed(rowColumn)}; 
+                stream.Write(bSend);
+                break;
+            }
         }
 
         private int DEBUG_randomCell()
@@ -644,29 +686,26 @@ namespace SeaBattleConsole
         {
             return rowColumn % 10;
         }
-        private bool getBombed(int rowColumn)
+        private int getBombed(int rowColumn)
         {
             int row = getRow(rowColumn);
             int column = getColumn(rowColumn);
-
+            turn = true;
             if (enemyField[row, column].GetBombed()) // you can't bomb the ship part 2 times
-                return false;
+                return 0;
 
             if (playerField[row, column].Bomb())
             {
                 playerHP--;
-
+                turn = false;
                 if (shipDestroyed(rowColumn))
                 {
-                    // send shipDestoyed signal
+                    return 2; // send shipDestoyed signal
                 }
 
-                turn = false;
-                return true;
+                return 1;
             }
-
-            turn = true;
-            return false;
+            return 0;
         }
 
 
