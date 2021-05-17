@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Net;
 using System.Net.Sockets;
+using System.IO;
+using System.Diagnostics;
 
 namespace SeaBattleConsole
 {
@@ -13,6 +15,7 @@ namespace SeaBattleConsole
         private static TcpClient client;
         private Cell[,] playerField = new Cell[10, 10];
         private Cell[,] enemyField = new Cell[10, 10];
+
         public Board()
         {
             for (int i = 0; i < 10; i++)
@@ -37,9 +40,32 @@ namespace SeaBattleConsole
             getHostIP = true;
             turn = false;
         }
+
+        public static void PlaySound(string file)
+        {
+            string path = Path.Combine(Environment.CurrentDirectory, @"sounds\");
+
+            string pathSTR = path + file;
+
+            Process.Start(@"powershell", $@"-c (New-Object Media.SoundPlayer '{pathSTR}').PlaySync();");
+        }
+
+        public static void stopSound()
+        {
+            //Process.Start("cmd.exe", "/c taskkill /F /IM powershell.exe");
+
+            Process[] proc = Process.GetProcesses();
+            foreach (Process process in proc)
+                if (process.ProcessName == "powershell")
+                {
+                    process.Kill();
+                }
+        }
+
         public void start()
         {
             //client = new TcpClient();
+
             try
             {
                 client.Connect("93.191.58.52", 420);//93.191.58.52
@@ -52,6 +78,7 @@ namespace SeaBattleConsole
                     {
                         string sAnswer = System.Text.Encoding.Unicode.GetString(b, 0, i);
                         Console.WriteLine(sAnswer);
+                        PlaySound("place.wav");
                         if (sAnswer == "player found")
                             break;
                     }
@@ -62,6 +89,7 @@ namespace SeaBattleConsole
                 Console.WriteLine(e.Message);
                 return;
             }
+            Console.Clear();
             while (true)
             {
                 drawUI(); // gameplay loop
@@ -103,10 +131,15 @@ namespace SeaBattleConsole
             string input = Console.ReadLine();
             int cache = validCheck(input);
             if (cache == -1)
+            {
+                PlaySound("rotate.wav");
                 return;
+            }
 
+            PlaySound("place.wav");
             placeShip(getRow(cache), getColumn(cache), length);
         }
+
         private void afterPlan()
         {
             Console.Write("All ships dispatched, waiting for enemy...");
@@ -117,101 +150,26 @@ namespace SeaBattleConsole
             int i = 0;
             while ((i = stream.Read(b, 0, b.Length)) != 0)
             {
-                string messege = System.Text.Encoding.Unicode.GetString(b, 0,i);
-                if(messege == "1")
+                string messege = System.Text.Encoding.Unicode.GetString(b, 0, i);
+                if (messege == "1")
                 {
                     turn = true;
                     return;
                 }
-                if(messege == "0")
+                if (messege == "0")
                 {
                     turn = false;
                     return;
                 }
-                if (messege == "enemy done") {
+                if (messege == "enemy done")
+                {
+                    PlaySound("start.wav");
                     Console.WriteLine(messege);
-                    afplaning = false;    
+                    afplaning = false;
                 }
             }
         }
 
-        private void connectionSetup()
-        {
-            if (lobby)
-            {
-                Console.WriteLine("0 - Host");
-                Console.WriteLine("1 - Join\n");
-                string input = Console.ReadLine();
-
-                if (input.Length != 1)
-                    return;
-
-                lobby = false;
-
-                switch (input[0])
-                {
-                    case '0':
-                        host = true;
-                        turn = true;
-                        break;
-
-                    case '1':
-                        host = false;
-                        turn = false;
-                        break;
-
-                    default:
-                        lobby = true;
-                        break;
-                }
-
-                return;
-            }
-
-            if (!connected)
-            {
-                while (true)
-                {
-                    if (host)
-                    {
-                        Console.WriteLine("No opponent connection, wait...");
-                        // TODO write server logic
-                    }
-                    else
-                    {
-                        if (getHostIP)
-                        {
-                            Console.WriteLine("Enter host IP:");
-
-                            IPAddress ip;
-                            bool ValidateIP = false;
-                            string input;
-                            while (!ValidateIP)
-                            {
-                                input = Console.ReadLine();
-                                ValidateIP = IPAddress.TryParse(input, out ip);
-
-                                if (ValidateIP)
-                                {
-                                    Console.WriteLine("This is a valide ip address");
-                                }
-                                else
-                                    Console.WriteLine("This is not a valide ip address");
-                            }
-
-                            getHostIP = false;
-                        }
-                        else
-                        {
-                            Console.WriteLine("Connecting to host...");
-                            // TODO write client reconnect logic
-                        }
-                    }
-                }
-            }
-        }
-
- 
         private void drawUI()
         {
             Console.Clear(); // refresh console, clear old frame
@@ -256,19 +214,72 @@ namespace SeaBattleConsole
 
             if (playerHP == 0)
             {
-                Console.WriteLine("You've lost... Game will be closed in 5 seconds.");
+                PlaySound("lose.wav");
+                Console.WriteLine(@"
+
+ @@@@@                                        @@@@@
+@@@@@@@                                      @@@@@@@
+@@@@@@@           @@@@@@@@@@@@@@@            @@@@@@@
+ @@@@@@@@       @@@@@@@@@@@@@@@@@@@        @@@@@@@@
+     @@@@@     @@@@@@@@@@@@@@@@@@@@@     @@@@@
+       @@@@@  @@@@@@@@@@@@@@@@@@@@@@@  @@@@@
+         @@  @@@@@@@@@@@@@@@@@@@@@@@@@  @@
+            @@@@@@@    @@@@@@    @@@@@@
+            @@@@@@      @@@@      @@@@@
+            @@@@@@      @@@@      @@@@@
+             @@@@@@    @@@@@@    @@@@@
+              @@@@@@@@@@@  @@@@@@@@@@
+               @@@@@@@@@@  @@@@@@@@@
+           @@   @@@@@@@@@@@@@@@@@   @@
+           @@@@  @@@@ @ @ @ @ @@@@  @@@@
+          @@@@@   @@@ @ @ @ @ @@@   @@@@@
+        @@@@@      @@@@@@@@@@@@@      @@@@@
+      @@@@          @@@@@@@@@@@          @@@@
+   @@@@@              @@@@@@@              @@@@@
+  @@@@@@@                                 @@@@@@@
+   @@@@@                                   @@@@@
+
+             _      ____   _____ ______
+            | |    / __ \ / ____|  ____|
+            | |   | |  | | (___ | |__
+            | |   | |  | |\___ \|  __|
+            | |___| |__| |____) | |____
+            |______\____/|_____/|______|
+
+You've lost... Game will be closed in 5 seconds.");
                 System.Threading.Thread.Sleep(5000);
                 client.Close();
                 return;
-                // write disconnect signal and close the game
             }
             if (enemyHP == 0)
             {
-                Console.WriteLine("You've won! Game will be closed in 5 seconds.");
+                PlaySound("win.wav");
+                Console.WriteLine(@"
+
+         .* *.               `o`o`
+         *. .*              o`o`o`o      ^,^,^
+           * \               `o`o`     ^,^,^,^,^
+              \     ***        |       ^,^,^,^,^
+               \   *****       |        /^,^,^
+                \   ***        |       /
+    ~@~*~@~      \   \         |      /
+  ~*~@~*~@~*~     \   \        |     /
+  ~*~@smd@~*~      \   \       |    /     #$#$#        .`'.;.
+  ~*~@~*~@~*~       \   \      |   /     #$#$#$#   00  .`,.',
+    ~@~*~@~ \        \   \     |  /      /#$#$#   /|||  `.,'
+_____________\________\___\____|_/______/_________|\/\___||______
+
+               __          _______ _   _
+               \ \        / /_   _| \ | |
+                \ \  /\  / /  | | |  \| |
+                 \ \/  \/ /   | | | . ` |
+                  \  /\  /   _| |_| |\  |
+                   \/  \/   |_____|_| \_|
+
+You've won! Game will be closed in 5 seconds.");
                 System.Threading.Thread.Sleep(5000);
                 client.Close();
                 return;
-                // write disconnect signal and close the game
             }
 
             if (turn)
@@ -276,6 +287,7 @@ namespace SeaBattleConsole
             else
                 waitTurn();
         }
+
         public void drawLogo()
         {
             string text = @"   _____ ______            ____       _______ _______ _      ______
@@ -287,6 +299,7 @@ namespace SeaBattleConsole
             Console.Write(text);
             Console.Write("\n\n");
         }
+
         private void drawCell(Cell cell)
         {
             int status = cell.GetStatus();
@@ -328,34 +341,38 @@ namespace SeaBattleConsole
                 int column = getColumn(cache);
                 enemyField[row, column].Bomb();
                 NetworkStream stream = client.GetStream();
-                Byte[] b = new Byte[5] {(byte)cache,0,0,0,0};
+                Byte[] b = new Byte[5] { (byte)cache, 0, 0, 0, 0 };
                 stream.Write(b);
                 int i = 0;
                 while ((i = stream.Read(b, 0, b.Length)) != 0)
                 {
                     int result = BitConverter.ToInt32(b);
-                    switch(result)
+                    switch (result)
                     {
                         case 0:
+                            PlaySound("miss.wav");
                             turn = false;
                             return;
+
                         case 1:
+                            PlaySound("explosion.wav");
                             enemyField[row, column].PlaceShip();
                             enemyHP--;
                             return;
+
                         case 2:
+                            PlaySound("explosion.wav");
                             enemyField[row, column].PlaceShip();
                             enemyHP--;
                             destructionReveal(cache);
                             return;
+
                         default: break;
-                    }   
-                    
+                    }
                 }
-
             }
-
         }
+
         private void waitTurn()
         {
             Console.WriteLine("BOMBS!!! Brace!");
@@ -365,7 +382,7 @@ namespace SeaBattleConsole
             while ((i = stream.Read(b, 0, b.Length)) != 0)
             {
                 int rowColumn = BitConverter.ToInt32(b, 0);
-                Byte[] bSend = new Byte[1]{(byte)getBombed(rowColumn)}; 
+                Byte[] bSend = new Byte[1] { (byte)getBombed(rowColumn) };
                 stream.Write(bSend);
                 break;
             }
@@ -379,6 +396,7 @@ namespace SeaBattleConsole
 
             return row * 10 + column;
         }
+
         private bool bomb(int rowColumn)
         {
             int row = getRow(rowColumn);
@@ -452,6 +470,7 @@ namespace SeaBattleConsole
 
             return false;
         }
+
         private int validCheck(string input)
         {
             int length = input.Length;
@@ -560,6 +579,7 @@ namespace SeaBattleConsole
             shipsPlaced++;
             return true;
         }
+
         private bool shipDestroyed(int rowColumn)
         {
             int row = getRow(rowColumn);
@@ -643,6 +663,7 @@ namespace SeaBattleConsole
                 }
             }
         }
+
         private void destructionReveal(int rowColumn)
         {
             bubbleReveal(rowColumn);
@@ -687,20 +708,26 @@ namespace SeaBattleConsole
         {
             return rowColumn / 10;
         }
+
         private int getColumn(int rowColumn)
         {
             return rowColumn % 10;
         }
+
         private int getBombed(int rowColumn)
         {
             int row = getRow(rowColumn);
             int column = getColumn(rowColumn);
             turn = true;
-            if (playerField[row, column].GetBombed()) // you can't bomb the ship part 2 times
+            if (playerField[row, column].GetBombed())
+            {               // you can't bomb the ship part 2 times
+                PlaySound("miss.wav");
                 return 0;
+            }
 
             if (playerField[row, column].Bomb())
             {
+                PlaySound("explosion.wav");
                 playerHP--;
                 turn = false;
                 if (shipDestroyed(rowColumn))
@@ -710,10 +737,9 @@ namespace SeaBattleConsole
 
                 return 1;
             }
+            PlaySound("miss.wav");
             return 0;
         }
-
-
     }
 }
 
