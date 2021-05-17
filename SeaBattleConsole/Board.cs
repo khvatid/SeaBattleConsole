@@ -13,7 +13,267 @@ namespace SeaBattleConsole
         private static TcpClient client;
         private Cell[,] playerField = new Cell[10, 10];
         private Cell[,] enemyField = new Cell[10, 10];
+        public Board()
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                for (int j = 0; j < 10; j++)
+                {
+                    playerField[i, j] = new Cell(false);
+                    enemyField[i, j] = new Cell(true);
+                }
+            }
+            client = new TcpClient();
+            shipsPlaced = 0;
 
+            playerHP = 20;
+            enemyHP = playerHP;
+
+            placement = false;
+            afplaning = true;
+            connected = false;
+            lobby = true;
+            planning = true;
+            getHostIP = true;
+            turn = true;
+        }
+        public void start()
+        {
+            //client = new TcpClient();
+            try
+            {
+                client.Connect("localhost", 420);//93.191.58.52
+                if (client.Connected)
+                {
+                    NetworkStream serverCennel = client.GetStream();
+                    int i = 0;
+                    Byte[] b = new Byte[255];
+                    while ((i = serverCennel.Read(b, 0, b.Length)) != 0)
+                    {
+                        string sAnswer = System.Text.Encoding.Unicode.GetString(b, 0, i);
+                        Console.WriteLine(sAnswer);
+                        if (sAnswer == "player found")
+                            break;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return;
+            }
+            while (true)
+            {
+                drawUI(); // gameplay loop
+            }
+        }
+
+        private void plan()
+        {
+            if (shipsPlaced >= 2)
+            {
+                afplaning = true;
+                planning = false;
+                return;
+            }
+
+            Console.Write("Enter position for ");
+
+            int length = 0;
+
+            if (shipsPlaced == 0)
+                length = 4;
+            if (shipsPlaced > 0 && shipsPlaced < 3)
+                length = 3;
+            if (shipsPlaced > 2 && shipsPlaced < 6)
+                length = 2;
+            if (shipsPlaced > 5)
+                length = 1;
+            Console.Write(length);
+
+            Console.Write("-cell ship (f. e. B4 or d0).\n");
+            Console.Write("Current placement mode: ");
+            if (placement)
+                Console.Write("||");
+            else
+                Console.Write("═");
+            Console.Write(" . Enter R to change mode.\n");
+
+            string input = Console.ReadLine();
+            int cache = validCheck(input);
+            if (cache == -1)
+                return;
+
+            placeShip(getRow(cache), getColumn(cache), length);
+        }
+        private void afterPlan()
+        {
+            Console.Write("All ships dispatched, waiting for enemy...");
+            NetworkStream stream = client.GetStream();
+            Byte[] b = new Byte[20];
+            Byte[] bSend = System.Text.Encoding.Unicode.GetBytes("done");
+            stream.Write(bSend);
+            int i = 0;
+            while ((i = stream.Read(b, 0, b.Length)) != 0)
+            {
+                string messege = System.Text.Encoding.Unicode.GetString(b, 0,i);
+                
+                if (messege == "enemy done") {
+                    Console.WriteLine(messege);
+                    afplaning = false;    
+                    break;
+                }
+            }
+        }
+
+        private void connectionSetup()
+        {
+            if (lobby)
+            {
+                Console.WriteLine("0 - Host");
+                Console.WriteLine("1 - Join\n");
+                string input = Console.ReadLine();
+
+                if (input.Length != 1)
+                    return;
+
+                lobby = false;
+
+                switch (input[0])
+                {
+                    case '0':
+                        host = true;
+                        turn = true;
+                        break;
+
+                    case '1':
+                        host = false;
+                        turn = false;
+                        break;
+
+                    default:
+                        lobby = true;
+                        break;
+                }
+
+                return;
+            }
+
+            if (!connected)
+            {
+                while (true)
+                {
+                    if (host)
+                    {
+                        Console.WriteLine("No opponent connection, wait...");
+                        // TODO write server logic
+                    }
+                    else
+                    {
+                        if (getHostIP)
+                        {
+                            Console.WriteLine("Enter host IP:");
+
+                            IPAddress ip;
+                            bool ValidateIP = false;
+                            string input;
+                            while (!ValidateIP)
+                            {
+                                input = Console.ReadLine();
+                                ValidateIP = IPAddress.TryParse(input, out ip);
+
+                                if (ValidateIP)
+                                {
+                                    Console.WriteLine("This is a valide ip address");
+                                }
+                                else
+                                    Console.WriteLine("This is not a valide ip address");
+                            }
+
+                            getHostIP = false;
+                        }
+                        else
+                        {
+                            Console.WriteLine("Connecting to host...");
+                            // TODO write client reconnect logic
+                        }
+                    }
+                }
+            }
+        }
+
+ 
+        private void drawUI()
+        {
+            Console.Clear(); // refresh console, clear old frame
+
+            drawLogo();
+
+            //connectionSetup();
+
+            Console.WriteLine($"Player HP: {playerHP} \t\tEnemy HP: {enemyHP}\n"); // HPs information
+
+            Console.WriteLine("  ABCDEFGHIJ\t\t  ABCDEFGHIJ");
+
+            for (int i = 0; i < 10; i++) // rows
+            {
+                Console.Write(i);
+                Console.Write(" ");
+
+                for (int j = 0; j < 10; j++) // player columns
+                    drawCell(playerField[i, j]);
+
+                Console.Write("\t\t");
+
+                Console.Write(i);
+                Console.Write(" ");
+
+                for (int j = 0; j < 10; j++) // enemy columns
+                    drawCell(enemyField[i, j]);
+
+                Console.Write("\n"); // end of the line (row)
+            }
+
+            Console.Write("\n");
+
+            if (planning)
+            {
+                plan();
+                return;
+            }
+
+            if (afplaning)
+                afterPlan();
+
+            if (playerHP == 0)
+            {
+                Console.WriteLine("You've lost... Game will be closed in 5 seconds.");
+                System.Threading.Thread.Sleep(5000);
+                // write disconnect signal and close the game
+            }
+            if (enemyHP == 0)
+            {
+                Console.WriteLine("You've won! Game will be closed in 5 seconds.");
+                System.Threading.Thread.Sleep(5000);
+                // write disconnect signal and close the game
+            }
+
+            if (turn)
+                makeTurn();
+            else
+                waitTurn();
+        }
+        public void drawLogo()
+        {
+            string text = @"   _____ ______            ____       _______ _______ _      ______
+  / ____|  ____|   /\     |  _ \   /\|__   __|__   __| |    |  ____|
+ | (___ | |__     /  \    | |_) | /  \  | |     | |  | |    | |__
+  \___ \|  __|   / /\ \   |  _ < / /\ \ | |     | |  | |    |  __|
+  ____) | |____ / ____ \  | |_) / ____ \| |     | |  | |____| |____
+ |_____/|______/_/    \_\ |____/_/    \_\_|     |_|  |______|______|";
+            Console.Write(text);
+            Console.Write("\n\n");
+        }
         private void drawCell(Cell cell)
         {
             int status = cell.GetStatus();
@@ -42,6 +302,109 @@ namespace SeaBattleConsole
             }
         }
 
+        private void makeTurn()
+        {
+            Console.WriteLine("Enter coordinates to bomb (if you damage enemy ship he skips the turn): ");
+            string input = Console.ReadLine();
+
+            int cache = validCheck(input);
+            if (cache == -1)
+                return;
+
+            // send cache to enemy for his getBombed
+
+            // write something to change bool turn
+
+            // if received signal shipDestroyed, call destructionReveal(cache)
+        }
+        private void waitTurn()
+        {
+            Console.WriteLine("BOMBS!!! Brace!");
+
+            // write server logic
+        }
+
+        private int DEBUG_randomCell()
+        {
+            Random rnd = new Random();
+            int row = rnd.Next(10);
+            int column = rnd.Next(10);
+
+            return row * 10 + column;
+        }
+        private bool bomb(int rowColumn)
+        {
+            int row = getRow(rowColumn);
+            int column = getColumn(rowColumn);
+
+            if (enemyField[row, column].GetBombed()) // you can't bomb the same spot 2 times
+                return false;
+
+            if (enemyField[row, column].Bomb())
+            {
+                int rowUp = row - 1;
+                int rowDown = row + 1;
+                int columnLeft = column - 1;
+                int columnRight = column + 1;
+                bool destroyedShip = true;
+                if (destroyedShip)
+                    for (; rowUp > -1; rowUp--) // looking up for more undamaged parts of the same ship
+                    {
+                        if (!enemyField[rowUp, column].GetShip()) // check if there is even a ship
+                            break;
+                        if (enemyField[rowUp, column].GetShip() && !enemyField[rowUp, column].GetBombed())
+                        {
+                            destroyedShip = false;
+                            break;
+                        }
+                    }
+
+                if (destroyedShip)
+                    for (; rowDown < 10; rowDown++) // looking down for more undamaged parts of the same ship
+                    {
+                        if (!enemyField[rowDown, column].GetShip()) // check if there is even a ship
+                            break;
+                        if (enemyField[rowDown, column].GetShip() && !enemyField[rowDown, column].GetBombed())
+                        {
+                            destroyedShip = false;
+                            break;
+                        }
+                    }
+
+                if (destroyedShip)
+                    for (; columnLeft > -1; columnLeft--) // looking left for more undamaged parts of the same ship
+                    {
+                        if (!enemyField[row, columnLeft].GetShip()) // check if there is even a ship
+                            break;
+                        if (enemyField[row, columnLeft].GetShip() && !enemyField[row, columnLeft].GetBombed())
+                        {
+                            destroyedShip = false;
+                            break;
+                        }
+                    }
+
+                if (destroyedShip)
+                    for (; columnRight < 10; columnRight++) // looking right for more undamaged parts of the same ship
+                    {
+                        if (!enemyField[row, columnRight].GetShip()) // check if there is even a ship
+                            break;
+                        if (enemyField[row, columnRight].GetShip() && !enemyField[row, columnRight].GetBombed())
+                        {
+                            destroyedShip = false;
+                            break;
+                        }
+                    }
+
+                if (destroyedShip)
+                    destructionReveal(rowColumn);
+
+                enemyHP--;
+
+                return true;
+            }
+
+            return false;
+        }
         private int validCheck(string input)
         {
             int length = input.Length;
@@ -150,251 +513,6 @@ namespace SeaBattleConsole
             shipsPlaced++;
             return true;
         }
-
-        private void afterPlan()
-        {
-            Console.Write("All ships dispatched, waiting for enemy...");
-            NetworkStream stream = client.GetStream();
-            Byte[] b = new Byte[10];
-            Byte[] bSend = System.Text.Encoding.Unicode.GetBytes("done");
-            int i;
-            while ((i = stream.Read(b, 0, b.Length)) != 0)
-            {
-                string messege = System.Text.Encoding.Unicode.GetString(b, 0, i);
-                Console.WriteLine(messege);
-                if (messege == "enemy done!") break;
-            }
-        }
-
-        private void connectionSetup()
-        {
-            if (lobby)
-            {
-                Console.WriteLine("0 - Host");
-                Console.WriteLine("1 - Join\n");
-                string input = Console.ReadLine();
-
-                if (input.Length != 1)
-                    return;
-
-                lobby = false;
-
-                switch (input[0])
-                {
-                    case '0':
-                        host = true;
-                        turn = true;
-                        break;
-
-                    case '1':
-                        host = false;
-                        turn = false;
-                        break;
-
-                    default:
-                        lobby = true;
-                        break;
-                }
-
-                return;
-            }
-
-            if (!connected)
-            {
-                while (true)
-                {
-                    if (host)
-                    {
-                        Console.WriteLine("No opponent connection, wait...");
-                        // TODO write server logic
-                    }
-                    else
-                    {
-                        if (getHostIP)
-                        {
-                            Console.WriteLine("Enter host IP:");
-
-                            IPAddress ip;
-                            bool ValidateIP = false;
-                            string input;
-                            while (!ValidateIP)
-                            {
-                                input = Console.ReadLine();
-                                ValidateIP = IPAddress.TryParse(input, out ip);
-
-                                if (ValidateIP)
-                                {
-                                    Console.WriteLine("This is a valide ip address");
-                                }
-                                else
-                                    Console.WriteLine("This is not a valide ip address");
-                            }
-
-                            getHostIP = false;
-                        }
-                        else
-                        {
-                            Console.WriteLine("Connecting to host...");
-                            // TODO write client reconnect logic
-                        }
-                    }
-                }
-            }
-        }
-
-        private void plan()
-        {
-            if (shipsPlaced >= 10)
-            {
-                afplaning = true;
-                return;
-            }
-
-            Console.Write("Enter position for ");
-
-            int length = 0;
-
-            if (shipsPlaced == 0)
-                length = 4;
-            if (shipsPlaced > 0 && shipsPlaced < 3)
-                length = 3;
-            if (shipsPlaced > 2 && shipsPlaced < 6)
-                length = 2;
-            if (shipsPlaced > 5)
-                length = 1;
-            Console.Write(length);
-
-            Console.Write("-cell ship (f. e. B4 or d0).\n");
-            Console.Write("Current placement mode: ");
-            if (placement)
-                Console.Write("||");
-            else
-                Console.Write("═");
-            Console.Write(" . Enter R to change mode.\n");
-
-            string input = Console.ReadLine();
-            int cache = validCheck(input);
-            if (cache == -1)
-                return;
-
-            placeShip(getRow(cache), getColumn(cache), length);
-        }
-
-        public void drawLogo()
-        {
-            string text = @"   _____ ______            ____       _______ _______ _      ______
-  / ____|  ____|   /\     |  _ \   /\|__   __|__   __| |    |  ____|
- | (___ | |__     /  \    | |_) | /  \  | |     | |  | |    | |__
-  \___ \|  __|   / /\ \   |  _ < / /\ \ | |     | |  | |    |  __|
-  ____) | |____ / ____ \  | |_) / ____ \| |     | |  | |____| |____
- |_____/|______/_/    \_\ |____/_/    \_\_|     |_|  |______|______|";
-            Console.Write(text);
-            Console.Write("\n\n");
-        }
-
-        private int getRow(int rowColumn)
-        {
-            return rowColumn / 10;
-        }
-
-        private int getColumn(int rowColumn)
-        {
-            return rowColumn % 10;
-        }
-
-        private void makeTurn()
-        {
-            Console.WriteLine("Enter coordinates to bomb (if you damage enemy ship he skips the turn): ");
-            string input = Console.ReadLine();
-
-            int cache = validCheck(input);
-            if (cache == -1)
-                return;
-
-            // send cache to enemy for his getBombed
-
-            // write something to change bool turn
-
-            // if received signal shipDestroyed, call destructionReveal(cache)
-        }
-
-        private int DEBUG_randomCell()
-        {
-            Random rnd = new Random();
-            int row = rnd.Next(10);
-            int column = rnd.Next(10);
-
-            return row * 10 + column;
-        }
-
-        private void waitTurn()
-        {
-            Console.WriteLine("BOMBS!!! Brace!");
-
-            // write server logic
-        }
-
-        private void drawUI()
-        {
-            Console.Clear(); // refresh console, clear old frame
-
-            drawLogo();
-
-            //connectionSetup();
-
-            Console.WriteLine($"Player HP: {playerHP} \t\tEnemy HP: {enemyHP}\n"); // HPs information
-
-            Console.WriteLine("  ABCDEFGHIJ\t\t  ABCDEFGHIJ");
-
-            for (int i = 0; i < 10; i++) // rows
-            {
-                Console.Write(i);
-                Console.Write(" ");
-
-                for (int j = 0; j < 10; j++) // player columns
-                    drawCell(playerField[i, j]);
-
-                Console.Write("\t\t");
-
-                Console.Write(i);
-                Console.Write(" ");
-
-                for (int j = 0; j < 10; j++) // enemy columns
-                    drawCell(enemyField[i, j]);
-
-                Console.Write("\n"); // end of the line (row)
-            }
-
-            Console.Write("\n");
-
-            if (planning)
-            {
-                plan();
-                return;
-            }
-
-            if (afplaning)
-                afterPlan();
-
-            if (playerHP == 0)
-            {
-                Console.WriteLine("You've lost... Game will be closed in 5 seconds.");
-                System.Threading.Thread.Sleep(5000);
-                // write disconnect signal and close the game
-            }
-            if (enemyHP == 0)
-            {
-                Console.WriteLine("You've won! Game will be closed in 5 seconds.");
-                System.Threading.Thread.Sleep(5000);
-                // write disconnect signal and close the game
-            }
-
-            if (turn)
-                makeTurn();
-            else
-                waitTurn();
-        }
-
         private bool shipDestroyed(int rowColumn)
         {
             int row = getRow(rowColumn);
@@ -459,31 +577,6 @@ namespace SeaBattleConsole
             return false;
         }
 
-        private bool getBombed(int rowColumn)
-        {
-            int row = getRow(rowColumn);
-            int column = getColumn(rowColumn);
-
-            if (enemyField[row, column].GetBombed()) // you can't bomb the ship part 2 times
-                return false;
-
-            if (playerField[row, column].Bomb())
-            {
-                playerHP--;
-
-                if (shipDestroyed(rowColumn))
-                {
-                    // send shipDestoyed signal
-                }
-
-                turn = false;
-                return true;
-            }
-
-            turn = true;
-            return false;
-        }
-
         private void bubbleReveal(int rowColumn)
         {
             int row = getRow(rowColumn);
@@ -503,7 +596,6 @@ namespace SeaBattleConsole
                 }
             }
         }
-
         private void destructionReveal(int rowColumn)
         {
             bubbleReveal(rowColumn);
@@ -544,135 +636,40 @@ namespace SeaBattleConsole
             }
         }
 
-        private bool bomb(int rowColumn)
+        private int getRow(int rowColumn)
+        {
+            return rowColumn / 10;
+        }
+        private int getColumn(int rowColumn)
+        {
+            return rowColumn % 10;
+        }
+        private bool getBombed(int rowColumn)
         {
             int row = getRow(rowColumn);
             int column = getColumn(rowColumn);
 
-            if (enemyField[row, column].GetBombed()) // you can't bomb the same spot 2 times
+            if (enemyField[row, column].GetBombed()) // you can't bomb the ship part 2 times
                 return false;
 
-            if (enemyField[row, column].Bomb())
+            if (playerField[row, column].Bomb())
             {
-                int rowUp = row - 1;
-                int rowDown = row + 1;
-                int columnLeft = column - 1;
-                int columnRight = column + 1;
-                bool destroyedShip = true;
-                if (destroyedShip)
-                    for (; rowUp > -1; rowUp--) // looking up for more undamaged parts of the same ship
-                    {
-                        if (!enemyField[rowUp, column].GetShip()) // check if there is even a ship
-                            break;
-                        if (enemyField[rowUp, column].GetShip() && !enemyField[rowUp, column].GetBombed())
-                        {
-                            destroyedShip = false;
-                            break;
-                        }
-                    }
+                playerHP--;
 
-                if (destroyedShip)
-                    for (; rowDown < 10; rowDown++) // looking down for more undamaged parts of the same ship
-                    {
-                        if (!enemyField[rowDown, column].GetShip()) // check if there is even a ship
-                            break;
-                        if (enemyField[rowDown, column].GetShip() && !enemyField[rowDown, column].GetBombed())
-                        {
-                            destroyedShip = false;
-                            break;
-                        }
-                    }
+                if (shipDestroyed(rowColumn))
+                {
+                    // send shipDestoyed signal
+                }
 
-                if (destroyedShip)
-                    for (; columnLeft > -1; columnLeft--) // looking left for more undamaged parts of the same ship
-                    {
-                        if (!enemyField[row, columnLeft].GetShip()) // check if there is even a ship
-                            break;
-                        if (enemyField[row, columnLeft].GetShip() && !enemyField[row, columnLeft].GetBombed())
-                        {
-                            destroyedShip = false;
-                            break;
-                        }
-                    }
-
-                if (destroyedShip)
-                    for (; columnRight < 10; columnRight++) // looking right for more undamaged parts of the same ship
-                    {
-                        if (!enemyField[row, columnRight].GetShip()) // check if there is even a ship
-                            break;
-                        if (enemyField[row, columnRight].GetShip() && !enemyField[row, columnRight].GetBombed())
-                        {
-                            destroyedShip = false;
-                            break;
-                        }
-                    }
-
-                if (destroyedShip)
-                    destructionReveal(rowColumn);
-
-                enemyHP--;
-
+                turn = false;
                 return true;
             }
 
+            turn = true;
             return false;
         }
 
-        public Board()
-        {
-            for (int i = 0; i < 10; i++)
-            {
-                for (int j = 0; j < 10; j++)
-                {
-                    playerField[i, j] = new Cell(false);
-                    enemyField[i, j] = new Cell(true);
-                }
-            }
-            client = new TcpClient();
-            shipsPlaced = 0;
 
-            playerHP = 20;
-            enemyHP = playerHP;
-
-            placement = false;
-            afplaning = false;
-            connected = false;
-            lobby = true;
-            planning = true;
-            getHostIP = true;
-            turn = true;
-        }
-
-        public void start()
-        {
-            //client = new TcpClient();
-            try
-            {
-                client.Connect("93.191.58.52", 420);
-                if (client.Connected)
-                {
-                    NetworkStream serverCennel = client.GetStream();
-                    int i = 0;
-                    Byte[] b = new Byte[255];
-                    while ((i = serverCennel.Read(b, 0, b.Length)) != 0)
-                    {
-                        string sAnswer = System.Text.Encoding.Unicode.GetString(b, 0, i);
-                        Console.WriteLine(sAnswer);
-                        if (sAnswer == "player found")
-                            break;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message + "Server not active");
-                return;
-            }
-            while (true)
-            {
-                drawUI(); // gameplay loop
-            }
-        }
     }
 }
 

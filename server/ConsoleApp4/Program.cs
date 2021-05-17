@@ -3,16 +3,18 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace ServerForBattleShip
 {
+
+   
     class Program
     {
         static TcpListener tcpListener = new TcpListener(IPAddress.Any, 420);
         static List<TcpClient> clients = new List<TcpClient>();
         static string data = null;
         static byte[] b = new byte[256];
-        private static int log = 0;
         private static void Main(string[] args)
         {
             tcpListener.Start();
@@ -35,7 +37,7 @@ namespace ServerForBattleShip
                     if (clients.Count == 2)
                     {
                         SendToAllClients("player found");
-                        PlayRoom(client);
+                        PlayRoom();
                     }
                     else
                     {
@@ -45,6 +47,7 @@ namespace ServerForBattleShip
                     //ReciveFromClients(client);
                 });
             }
+            
         }
 
         static async private void AwaitRoom(TcpClient client)
@@ -61,37 +64,47 @@ namespace ServerForBattleShip
                     }
                     System.Threading.Thread.Sleep(100);
                 }
-                PlayRoom(client);
-            
             });
         }
 
 
-        static async private void PlayRoom(TcpClient client)
+        static void plan(object obj)
         {
-            await Task.Factory.StartNew(() =>
+            
+            TcpClient client = (TcpClient)obj;
+            Console.WriteLine("ЕБАЛ В РОТ ЭТИ ПОТОКИ");
+            NetworkStream stream =  client.GetStream();
+            Byte[] vs = new Byte[10];
+            int i = 0;
+            while ((i = stream.Read(vs, 0, vs.Length)) != 0)
             {
-                NetworkStream stream = client.GetStream();
-                Byte[] vs = new Byte[10];
-                stream.Read(vs, 0, 10);
-                string data = System.Text.Encoding.Unicode.GetString(vs, 0, 10);
+                data = System.Text.Encoding.Unicode.GetString(vs, 0, i);
                 if (data == "done")
                 {
-                    log++;
-                    if (log == 2)
-                        SendToAllClients("enemy done");
+                    Console.WriteLine(data);
+                    return;
                 }
-                while (log != 2)
-                {
-                    System.Threading.Thread.Sleep(100);
-                }
-
-
-
-            });
+                    
+            }
         }
 
 
+
+        static private void PlayRoom()
+        {
+            List<Thread> threads = new List <Thread>();
+            threads.Add(new Thread(new ParameterizedThreadStart(plan)));
+            threads.Add(new Thread(new ParameterizedThreadStart(plan)));
+            threads[0].Start(clients[0]);
+            threads[1].Start(clients[1]);
+            for(int i=0;i<threads.Count;i++)
+            {
+                threads[i].Join();
+            }
+            SendToAllClients("enemy done");
+
+
+        }
 
 
 
