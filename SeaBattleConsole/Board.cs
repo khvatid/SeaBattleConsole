@@ -65,6 +65,7 @@ namespace SeaBattleConsole
             while (true)
             {
                 drawUI(); // gameplay loop
+                if (enemyHP == 0 || playerHP == 0) return;
             }
         }
 
@@ -257,12 +258,16 @@ namespace SeaBattleConsole
             {
                 Console.WriteLine("You've lost... Game will be closed in 5 seconds.");
                 System.Threading.Thread.Sleep(5000);
+                client.Close();
+                return;
                 // write disconnect signal and close the game
             }
             if (enemyHP == 0)
             {
                 Console.WriteLine("You've won! Game will be closed in 5 seconds.");
                 System.Threading.Thread.Sleep(5000);
+                client.Close();
+                return;
                 // write disconnect signal and close the game
             }
 
@@ -691,7 +696,7 @@ namespace SeaBattleConsole
             int row = getRow(rowColumn);
             int column = getColumn(rowColumn);
             turn = true;
-            if (enemyField[row, column].GetBombed()) // you can't bomb the ship part 2 times
+            if (playerField[row, column].GetBombed()) // you can't bomb the ship part 2 times
                 return 0;
 
             if (playerField[row, column].Bomb())
