@@ -42,8 +42,7 @@ namespace ServerForBattleShip
                     else
                     {
                         AwaitRoom(client);
-                    }
-                        
+                    } 
                     //ReciveFromClients(client);
                 });
             }
@@ -122,8 +121,8 @@ namespace ServerForBattleShip
                 threads[i].Join();
             }
             SendToAllClients("enemy done");
-            SendToClient(clients[0],"first");
-            SendToClient(clients[1], "second");
+            SendToClient(clients[0],"1");
+            SendToClient(clients[1], "0");
             threads.Clear();
             bool firstPlayer = true;
             try
