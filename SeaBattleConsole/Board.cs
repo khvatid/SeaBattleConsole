@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.IO;
 using System.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace SeaBattleConsole
 {
@@ -18,6 +19,7 @@ namespace SeaBattleConsole
 
         public Board()
         {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             for (int i = 0; i < 10; i++)
             {
                 for (int j = 0; j < 10; j++)
@@ -145,7 +147,7 @@ namespace SeaBattleConsole
             Console.Write("All ships dispatched, waiting for enemy...");
             NetworkStream stream = client.GetStream();
             Byte[] b = new Byte[20];
-            Byte[] bSend = System.Text.Encoding.Unicode.GetBytes("done");
+            Byte[] bSend = System.Text.Encoding.GetEncoding(866).GetBytes("2588");
             stream.Write(bSend);
             int i = 0;
             while ((i = stream.Read(b, 0, b.Length)) != 0)
@@ -296,6 +298,7 @@ You've won! Game will be closed in 5 seconds.");
   \___ \|  __|   / /\ \   |  _ < / /\ \ | |     | |  | |    |  __|
   ____) | |____ / ____ \  | |_) / ____ \| |     | |  | |____| |____
  |_____/|______/_/    \_\ |____/_/    \_\_|     |_|  |______|______|";
+
             Console.Write(text);
             Console.Write("\n\n");
         }
@@ -303,15 +306,23 @@ You've won! Game will be closed in 5 seconds.");
         private void drawCell(Cell cell)
         {
             int status = cell.GetStatus();
+            var recievedBytes = new byte[256];
+
+            for (int i = 0; i < recievedBytes.Length; i++)
+            {
+                recievedBytes[i] = (byte)i;
+            }
+            var str = Encoding.GetEncoding(866).GetString(recievedBytes);
+            
 
             switch (status)
             {
                 case 0:
-                    Console.Write("#"); // fog
+                    Console.Write(str[178]); // fog
                     break;
 
                 case 1:
-                    Console.Write("_"); // empty unbombed
+                    Console.Write(str[176]); // empty unbombed
                     break;
 
                 case 2:
