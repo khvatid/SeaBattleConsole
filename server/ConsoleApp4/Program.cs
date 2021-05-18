@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Text;
 
 namespace ServerForBattleShip
 {
@@ -42,7 +43,8 @@ namespace ServerForBattleShip
                     else
                     {
                         AwaitRoom(client);
-                    } 
+                    }
+                        
                     //ReciveFromClients(client);
                 });
             }
@@ -72,17 +74,17 @@ namespace ServerForBattleShip
             
             TcpClient client = (TcpClient)obj;
             NetworkStream stream =  client.GetStream();
-            Byte[] vs = new Byte[10];
+            Byte[] vs = new Byte[256];
             int i = 0;
+
             while ((i = stream.Read(vs, 0, vs.Length)) != 0)
             {
-                data = System.Text.Encoding.Unicode.GetString(vs, 0, i);
-                if (data == "done")
+                data = System.Text.Encoding.GetEncoding(866).GetString(vs, 0, i);
+                if (data == "2588")
                 {
                     Console.WriteLine(data);
                     return;
                 }
-                    
             }
         }
         // 0 не попал  -  1 и 2 попал
