@@ -70,7 +70,6 @@ namespace SeaBattleConsole
                         break;
 
                     case "1":
-                        stopSound();
                         PlaySound("place.wav");
                         Console.Clear();
                         game.start();

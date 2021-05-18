@@ -8,7 +8,7 @@ using System.Threading;
 namespace ServerForBattleShip
 {
 
-   
+
     class Program
     {
         static TcpListener tcpListener = new TcpListener(IPAddress.Any, 420);
@@ -43,11 +43,10 @@ namespace ServerForBattleShip
                     {
                         AwaitRoom(client);
                     }
-                        
                     //ReciveFromClients(client);
                 });
             }
-            
+
         }
 
         static async private void AwaitRoom(TcpClient client)
@@ -55,12 +54,12 @@ namespace ServerForBattleShip
             await Task.Factory.StartNew(() =>//отправка всем клиентам
             {
                 bool wait = true;
-                while(wait)
+                while (wait)
                 {
-                    if(clients.Count == 2)
+                    if (clients.Count == 2)
                     {
                         wait = false;
-                        
+
                     }
                     System.Threading.Thread.Sleep(100);
                 }
@@ -70,9 +69,9 @@ namespace ServerForBattleShip
 
         static void plan(object obj)
         {
-            
+
             TcpClient client = (TcpClient)obj;
-            NetworkStream stream =  client.GetStream();
+            NetworkStream stream = client.GetStream();
             Byte[] vs = new Byte[10];
             int i = 0;
             while ((i = stream.Read(vs, 0, vs.Length)) != 0)
@@ -83,20 +82,20 @@ namespace ServerForBattleShip
                     Console.WriteLine(data);
                     return;
                 }
-                    
+
             }
         }
         // 0 не попал  -  1 и 2 попал
-       static int playStage(NetworkStream player1, NetworkStream player2)
+        static int playStage(NetworkStream player1, NetworkStream player2)
         {
             int i = 0;
             int j = 0;
-            while((i = player1.Read(b,0,b.Length))!=0)
+            while ((i = player1.Read(b, 0, b.Length)) != 0)
             {
                 int data1 = BitConverter.ToInt32(b, 0);
                 int data2;
-                player2.Write(b,0,i);
-                while((j = player2.Read(b,0,b.Length))!=0)
+                player2.Write(b, 0, i);
+                while ((j = player2.Read(b, 0, b.Length)) != 0)
                 {
                     data2 = BitConverter.ToInt32(b, 0);
                     player1.Write(b, 0, j);
@@ -112,18 +111,18 @@ namespace ServerForBattleShip
 
         static private void PlayRoom()
         {
-            List<Thread> threads = new List <Thread>();
+            List<Thread> threads = new List<Thread>();
             threads.Add(new Thread(new ParameterizedThreadStart(plan)));
             threads.Add(new Thread(new ParameterizedThreadStart(plan)));
             threads[0].Start(clients[0]);
             threads[1].Start(clients[1]);
-            for(int i=0;i<threads.Count;i++)
+            for (int i = 0; i < threads.Count; i++)
             {
                 threads[i].Join();
             }
             SendToAllClients("enemy done");
-            SendToClient(clients[0],"first");
-            SendToClient(clients[1], "second");
+            SendToClient(clients[0], "1");
+            SendToClient(clients[1], "0");
             threads.Clear();
             bool firstPlayer = true;
             try
@@ -143,13 +142,13 @@ namespace ServerForBattleShip
                     }
                 }
             }
-           catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine(e.Message);
                 clients.Clear();
                 return;
             }
-            
+
 
         }
 
